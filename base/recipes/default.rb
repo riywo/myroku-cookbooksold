@@ -8,3 +8,7 @@
 #
 include_recipe "apt"
 include_recipe "build-essential"
+
+package "vim" do
+  action :install
+end
