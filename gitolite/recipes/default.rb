@@ -45,7 +45,7 @@ end
 
 git "/home/git/gitolite" do
   repository node[:gitolite][:repository_url]
-  reference "master"
+  branch "master"
   action :sync
   user "git"
 end
@@ -54,6 +54,12 @@ execute "ssh-keygen -q -f /home/git/.ssh/id_rsa -N \"\" " do
   user "git"
   action :run
   not_if {File.exist? '/home/git/.ssh/id_rsa.pub'}
+end
+
+execute "ssh-keyscan -t rsa localhost > /home/git/.ssh/known_hosts" do
+  user "git"
+  action :run
+  not_if {File.exist? '/home/git/.ssh/known_hosts'}
 end
 
 execute "/home/git/gitolite/install -ln" do
@@ -70,4 +76,11 @@ execute "/home/git/bin/gitolite setup -pk /home/git/.ssh/id_rsa.pub" do
   environment ({'HOME' => '/home/git'})
   cwd "/home/git"
   not_if {File.exists?("/home/git/repositories") }
+end
+
+git "/home/git/gitolite-admin" do
+  repository "git@localhost:gitolite-admin"
+  branch "master"
+  action :sync
+  user "git"
 end
