@@ -18,6 +18,11 @@
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
 include_recipe "git::default"
 
+gem_package "ruby-shadow" do
+  action :install
+  source "http://rubygems.org"
+end
+
 node.set_unless['gitolite']['password'] = secure_password
 user "git" do
   comment "Git User"
@@ -32,25 +37,37 @@ directory "/home/git" do
   mode "0755"
 end
 
+directory "/home/git/bin" do
+  owner "git"
+  group "git"
+  mode "0755"
+end
+
 git "/home/git/gitolite" do
   repository node[:gitolite][:repository_url]
   reference "master"
   action :sync
   user "git"
 end
+
 execute "ssh-keygen -q -f /home/git/.ssh/id_rsa -N \"\" " do
   user "git"
   action :run
   not_if {File.exist? '/home/git/.ssh/id_rsa.pub'}
 end
-execute "cp /home/git/.ssh/id_rsa.pub /home/git/.ssh/authorized_keys" do
-  user "git"
-  not_if {File.exist? '/home/git/.ssh/authorized_keys'}
-end
-execute "./gl-easy-install -q git #{node[:gitolite][:host]} #{node[:gitolite][:admin_name]}" do
+
+execute "/home/git/gitolite/install -ln" do
   user "git"
   group "git"
   environment ({'HOME' => '/home/git'})
-  cwd "/home/git/gitolite/src"
+  cwd "/home/git"
+  not_if {File.exists?("/home/git/bin/gitolite") }
+end
+
+execute "/home/git/bin/gitolite setup -pk /home/git/.ssh/id_rsa.pub" do
+  user "git"
+  group "git"
+  environment ({'HOME' => '/home/git'})
+  cwd "/home/git"
   not_if {File.exists?("/home/git/repositories") }
 end
